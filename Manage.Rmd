@@ -1,0 +1,168 @@
+---
+title: "Starter Survey 2017"
+author: "Hugo SECHIER"
+date: "November 3, 2017"
+output: 
+  html_notebook: 
+    code_folding: show
+    highlight: haddock
+    theme: readable
+---
+
+
+# Introduction
+
+This is an analysis of the responses to Kaggle's 2017 user survey. In total, 16,716 people responded to enough of the survey to be analyzed. 
+Allow to this survey and this following analysis, we can know how to manage and launch a data science team. 
+
+## Data Source
+
+All data was collected by [Kaggle](https://www.kaggle.com) in their 2017 user survey. The survey was available to users from August 7 - August 25, 2017. 
+
+Inspired by [this kernel](https://www.kaggle.com/amberthomas/kaggle-2017-survey-results)
+
+## Installing Necessary Packages
+
+```{r}
+# For Data Cleaning
+library(tidyverse)
+
+library(ggplot2)
+library(plotly)
+# For text analysis and word clouds
+library(tm)
+library(SnowballC)
+library(wordcloud)
+```
+
+## Loading Data
+
+Based on the way this data is structured, I want to keep the first row as column headers. 
+
+```{r}
+# Import multiple choice data
+Survey <- read.csv('../input/multipleChoiceResponses.csv', stringsAsFactors = TRUE, header = TRUE)
+
+# Import freeform responses
+rawFFData <- read.csv('../input/freeformResponses.csv', stringsAsFactors = FALSE, header = TRUE)
+
+# Import the actual questions asked
+schema <- read.csv('../input/schema.csv', stringsAsFactors = FALSE, header = TRUE)
+```
+
+Last, I need to import the currency conversion rates for use later. 
+```{r}
+conversionRates <- read.csv('../input/conversionRates.csv', header = TRUE)
+```
+## Basic clean data 
+### Id 
+We're creating an id column. It will use later 
+```{r}
+Survey = Survey %>% 
+  mutate(id = 1:nrow(Survey))
+```
+
+### Age 
+We have to cut the age in order to analyse easiest possible. 
+
+```{r}
+Survey$Age <- as.numeric(as.character(Survey$Age))
+ggplot(Survey,aes(Age)) +
+  geom_histogram(bins = 100,color = "blue")
+```
+```{r}
+breaks_Age = c(min(Survey$Age,na.rm = T),"20","25","30","45",max(Survey$Age,na.rm = T))
+Survey$Age = cut(Survey$Age,breaks_Age,include.lowest = TRUE)
+```
+
+
+
+
+
+## What kind of company works ? 
+size
+
+## Where launch your futur company ? 
+map
+
+## What kind of equipment use ? 
+computer
+## Where can you find data scientist ? 
+School 
+Reconversion 
+
+```{r}
+df = Survey %>% 
+  select(CurrentJobTitleSelect) %>% 
+  group_by(CurrentJobTitleSelect) %>% 
+  summarise(count = n()) %>% 
+  arrange(desc(count)) %>% 
+  filter(CurrentJobTitleSelect != "")
+  
+custom_text = sprintf("Job: %s <b> freq : %d",df$CurrentJobTitleSelect,df$count)
+p = ggplot(df,aes(x = reorder(CurrentJobTitleSelect,-count),y = count,fill = reorder(CurrentJobTitleSelect,-count),text = custom_text))+
+  geom_bar(stat = "identity")
+ggplotly(p,tooltip = "text")
+```
+
+
+```{r}
+foo = Survey %>% 
+  select(Age,CurrentJobTitleSelect,DataScienceIdentitySelect) %>% 
+  filter(CurrentJobTitleSelect != "") %>% 
+  filter(DataScienceIdentitySelect != "") %>% 
+  filter(CurrentJobTitleSelect %in% df$CurrentJobTitleSelect[1:10]) %>% 
+  ungroup() %>% 
+  filter(complete.cases(.)) %>% 
+  group_by(Age,CurrentJobTitleSelect,DataScienceIdentitySelect) %>% 
+  summarise(count = n()) %>% 
+  droplevels()
+
+alluvial(foo[,1:3], freq=foo$count,
+         col = ifelse(foo$DataScienceIdentitySelect == "Yes", "orange", "grey"),
+         border = ifelse(foo$DataScienceIdentitySelect == "Yes", "orange", "grey"),
+         cex = 0.7
+)
+
+```
+
+
+```{r}
+DS = Survey$id[which(Survey$DataScienceIdentitySelect == "Yes")]
+DS = c(DS,Survey$id[which(Survey$CurrentJobTitleSelect == "Data Scientist")])
+foo = Survey %>% 
+  mutate(IsDS = id %in% DS) %>% 
+  select(FormalEducation,MajorSelect,CurrentJobTitleSelect,IsDS) %>% 
+  filter(CurrentJobTitleSelect != "") %>% 
+  filter(FormalEducation != "") %>% 
+  filter(MajorSelect != "") %>% 
+  #filter(CurrentJobTitleSelect %in% df$CurrentJobTitleSelect[1:10]) %>% 
+  ungroup() %>% 
+  filter(complete.cases(.)) %>% 
+  group_by(FormalEducation,MajorSelect,CurrentJobTitleSelect,IsDS) %>% 
+  summarise(count = n()) %>% 
+  filter(count > 50) %>% 
+  droplevels()
+
+alluvial(foo[,1:4], freq=foo$count,
+         col = ifelse(foo$IsDS == "FALSE", "orange", "grey"),
+         border = ifelse(foo$IsDS == "FALSE", "orange", "grey"),
+         #hide = foo$count < 50,
+         cex = 0.7
+)
+
+```
+This graph can help you to know where you can find DS. 
+For example : 
+- Most of the bachelor's degree are not DS
+- A good Software Developer with a Doctoral degree can be as DS. Otherwise, it's not a DS.  
+
+## How can you form your data scientist ? 
+
+## Which data scientist are happy ? 
+
+## Which salary give on your data scientist ?
+predict the salary (model regression)
+
+
+

@@ -1,12 +1,12 @@
 ---
-output:
-  html_document:
-    collapsed: FALSE
-    theme: cosmo
-    toc: yes
-    toc_float: no
-    toc_depth: 2
-    df_print: paged
+title: "Starter Survey 2017"
+author: "Hugo SECHIER"
+date: "November 3, 2017"
+output: 
+  html_notebook: 
+    code_folding: show
+    highlight: haddock
+    theme: readable
 ---
 
 ```{r setup, include=FALSE}
