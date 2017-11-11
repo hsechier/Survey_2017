@@ -29,10 +29,13 @@ library(tidyverse)
 
 library(ggplot2)
 library(plotly)
+library(alluvial)
+library(circlize)
 # For text analysis and word clouds
 library(tm)
 library(SnowballC)
 library(wordcloud)
+
 ```
 
 ## Loading Data
@@ -158,6 +161,125 @@ For example :
 - A good Software Developer with a Doctoral degree can be as DS. Otherwise, it's not a DS.  
 
 ## How can you form your data scientist ? 
+
+### Skills
+```{r}
+recommendations <- Survey %>% 
+  # Remove any non-entries for either question
+  filter(!WorkToolsSelect == "") %>% 
+  filter(!LanguageRecommendationSelect == "") %>% 
+  # Select only the columns for the language recommendations and language use
+  select(WorkToolsSelect, LanguageRecommendationSelect) %>% 
+  # Split the language usage column at the comma
+  mutate(WorkToolsSelect = strsplit(as.character(WorkToolsSelect), '\\([^)]+,(*SKIP)(*FAIL)|,\\s*', perl = TRUE)) %>% 
+  # Split answers are now nested, need to unnest them
+  unnest(WorkToolsSelect) %>% 
+  # Group by language used and then by recommendation
+  group_by(WorkToolsSelect, LanguageRecommendationSelect) %>% 
+  # Rename the columns
+  rename(Used = WorkToolsSelect, Recommended = LanguageRecommendationSelect) %>% 
+  # Count the number of responses for each language use/recommendation combination
+  summarise(count = n()) %>% 
+  filter(count >300) 
+  
+
+# Display the results
+recommendations$Used = as.factor(recommendations$Used)
+recommendations = recommendations %>%
+  droplevels()
+```
+
+```{r}
+circos.clear()
+chordDiagram(recommendations,annotationTrack = "grid",,preAllocateTracks = 1)
+circos.trackPlotRegion(track.index = 1, panel.fun = function(x, y) {
+  xlim = get.cell.meta.data("xlim")
+  ylim = get.cell.meta.data("ylim")
+  sector.name = get.cell.meta.data("sector.index")
+  circos.text(mean(xlim), ylim[1] + .1, sector.name, facing = "clockwise", niceFacing = TRUE, adj = c(0, 0.5), cex=.6)
+  # circos.axis(h = "top", labels.cex = 0.5, major.tick.percentage = 0.2, sector.index = sector.name, track.index = 2)
+}, bg.border = NA)
+```
+As you can see, most of them use Python and R. If they have to recommand it, most of them choose Pyhton. 
+The cirle show that most of the people work with other that R and python, they recommand it python and R. 
+
+We can look up which technologies were considered to be the most important on the job. Here, I plotted popularity against usefulness again to see which technologies are used the most in the real world.
+```{r}
+# Get all column names that begin with "JobSkillImportance" and end in a letter
+platforms <- grep("^JobSkillImportance.*[A-z]$", names(Survey), value=T)
+
+names <- c()
+popularities <- c()
+scores <- c()
+
+for (platform in platforms) {
+    usefulness <- Survey %>%
+        group_by_(platform) %>%
+        count()
+    
+    # Popularity = the number of people who responded to this question
+    popularity <- usefulness[[2]][2] + usefulness[[2]][3] + usefulness[[2]][4]
+    
+    # Usefulness = a weighted average determining the usefulness of this platform
+    score <- (usefulness[[2]][2] * 2 + usefulness[[2]][3] * 1.5 + usefulness[[2]][4] * 1) / popularity
+    
+    names <- c(names, gsub("JobSkillImportance", "", platform))
+    popularities <- c(popularities, popularity)
+    scores <- c(scores, score)
+}
+
+scores_df <- data.frame(
+    Popularity = popularities,
+    Usefulness = scores,
+    Name = names
+)
+
+ggplot(scores_df, aes(x = Usefulness, y = Popularity)) +
+    ggtitle("Important Skills on the Job") +
+    geom_point() +
+    geom_text(aes(label = Name, family = "Helvetica"), nudge_y = 12) 
+```
+With this graph, we can understand that Python is the most useful and popular skill. The second one is Stats, then BigData, R, SQL and Visualizations. 
+
+Now you know which skills are important for your data scientist, you need to know HOW to learn it. You can provide them some plateform. Let's see the most usefulness : 
+
+### Plateform
+```{r}
+# Get all column names that begin with "LearningPlatformUsefulness"
+platforms <- grep("^LearningPlatformUsefulness", names(Survey), value=T)
+
+names <- c()
+popularities <- c()
+scores <- c()
+
+for (platform in platforms) {
+    usefulness <- Survey %>%
+        group_by_(platform) %>%
+        count()
+    
+    # Popularity = the number of people who responded to this question
+    popularity <- usefulness[[2]][2] + usefulness[[2]][3] + usefulness[[2]][4]
+    
+    # Usefulness = a weighted average determining the usefulness of this platform
+    score <- (usefulness[[2]][2] * 0 + usefulness[[2]][3] * 0.5 + usefulness[[2]][4] * 1) / popularity
+    
+    names <- c(names, gsub("LearningPlatformUsefulness", "", platform))
+    popularities <- c(popularities, popularity)
+    scores <- c(scores, score)
+}
+
+scores_df <- data.frame(
+    Popularity = popularities,
+    Usefulness = scores,
+    Name = names
+)
+
+ggplot(scores_df, aes(x = Usefulness, y = Popularity)) +
+    ggtitle("Effectiveness of Learning Methods") +
+    geom_point() +
+    geom_text(aes(label = Name, family = "Helvetica"), nudge_y = 200) 
+```
+So, you can propose them Kaggle, Courses, SO and Projects. 
 
 ## Which data scientist are happy ? 
 
