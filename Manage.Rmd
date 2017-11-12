@@ -279,7 +279,7 @@ ggplot(scores_df, aes(x = Usefulness, y = Popularity)) +
     geom_point() +
     geom_text(aes(label = Name, family = "Helvetica"), nudge_y = 200) 
 ```
-So, you can propose them Kaggle, Courses, SO and Projects. 
+So, you can propose them Kaggle, Courses, Stack Overflow and Projects. 
 
 ## Which data scientist are happy ? 
 
