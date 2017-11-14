@@ -29,6 +29,7 @@ library(tidyverse)
 
 library(ggplot2)
 library(plotly)
+library(alluvial)
 # For text analysis and word clouds
 library(tm)
 library(SnowballC)
